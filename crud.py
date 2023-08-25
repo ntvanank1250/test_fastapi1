@@ -23,6 +23,14 @@ def create_user(db: Session, user: schemas.UserCreate):
     db.refresh(db_user)
     return db_user
 
+def update_user(db: Session,user_id: int, password: str,activate: bool):
+    fake_hashed_password = password + "notreallyhashed"
+    db.query(models.User).filter(models.User.id == user_id).update({models.User.hashed_password : fake_hashed_password,
+                                                                    models.User.is_active:activate}, synchronize_session = False)
+    db_user = db.query(models.User).filter(models.User.id == user_id).first()
+    db.commit()
+    db.refresh(db_user)
+    return db_user
 
 def get_items(db: Session, skip: int = 0, limit: int = 100):
     return db.query(models.Item).offset(skip).limit(limit).all()
