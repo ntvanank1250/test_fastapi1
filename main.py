@@ -2,14 +2,15 @@ from fastapi import Depends, FastAPI, HTTPException
 from sqlalchemy.orm import Session
 import uvicorn
 
-import crud, models, schemas, database
+from app import crud, models, schemas, database
 
 SessionLocal = database.SessionLocal
 engine = database.engine
 
 models.Base.metadata.create_all(bind=engine)
 
-app = FastAPI()
+### app1
+app1 = FastAPI()
 
 # Dependency
 def get_db():
@@ -19,17 +20,13 @@ def get_db():
     finally:
         db.close()
 
-@app.get("/")
+# Main
+@app1.get("/")
 async def root():
-    return {"message": "hello world"}
+    return {"message": "Hello from FastAPI on port 8000"}
 
-
-@app.get("/users/", response_model=list[schemas.User])
-def read_users(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    users = crud.get_users(db, skip=skip, limit=limit)
-    return users
-
-@app.post("/users/", response_model=schemas.User)
+# create nhiều users
+@app1.post("/users/", response_model=schemas.User)
 def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     db_user = crud.get_user_by_email(db, email=user.email)
     if db_user:
@@ -37,45 +34,156 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     
     return crud.create_user(db=db, user=user)
 
-@app.get("/users/", response_model=list[schemas.User])
+# get all users
+@app1.get("/users/", response_model=list[schemas.User])
 def read_users(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     users = crud.get_users(db, skip=skip, limit=limit)
     return users
 
-@app.get("/users/{user_id}", response_model=schemas.User)
+# get one user
+@app1.get("/users/{user_id}", response_model=schemas.User)
 def read_user(user_id: int, db: Session = Depends(get_db)):
     db_user = crud.get_user(db, user_id=user_id)
     if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")
     return db_user
 
-# @app.put("/users/{id_user}", response_model=schemas.User)
-# def put_user(user_id: int, user: schemas.User, db: Session = Depends(get_db)):
-#     db_user = crud.get_user(db, user_id=user_id)
-#     if db_user is None:
-#         raise HTTPException(status_code=404, detail="User not found")
-#     password_new = db_user.hashed_password
-#     activate_new = db_user.is_active
-#     if user.password:
-#         password_new = user.password
-#     if user.is_active:
-#         activate_new = user.is_active
+# put one user
+@app1.put("/users/{user_id}", response_model=schemas.User)
+def update_user(user_id: int, user: schemas.User, db: Session = Depends(get_db)):
+    db_user = crud.get_user(db, user_id=user_id)
+    if db_user is None:
+        raise HTTPException(status_code=404, detail="User not found")
     
-#     return crud.update_user(db=db,user_id=user_id,password=password_new,activate=activate_new)
+    updated_user = crud.update_user(db, user_id=user_id, user_new=user)
+    return updated_user
 
+# change pass user
+@app1.put("/users/{user_id}/change_pass", response_model=schemas.ChangePassword)
+def change_pass(user_id: int, user: schemas.ChangePassword, db: Session = Depends(get_db)):
+    db_user = crud.get_user(db, user_id=user_id)
+    if db_user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    change_pass_user = crud.change_pass_user(db, user_id=user_id, use_new=user)
+    
+    return change_pass_user
 
-@app.post("/users/{user_id}/items/", response_model=schemas.Item)
+#create item for user
+@app1.post("/users/{user_id}/items/", response_model=schemas.Item)
 def create_item_for_user(
     user_id: int, item: schemas.ItemCreate, db: Session = Depends(get_db)
 ):
     return crud.create_user_item(db=db, item=item, user_id=user_id)
 
-
-@app.get("/items/", response_model=list[schemas.Item])
+# get all items
+@app1.get("/items/", response_model=list[schemas.Item])
 def read_items(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     items = crud.get_items(db, skip=skip, limit=limit)
     return items
 
+# get one item
+@app1.get("/items/{item_id}", response_model=schemas.Item)
+def read_item(item_id: int, db: Session = Depends(get_db)):
+    db_item = crud.get_item(db, item_id==item_id)
+    if db_item is None:
+        raise HTTPException(status_code=404, detail="Item not found")
+    return db_item
 
-if __name__ == "__main__":
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+# put one item
+@app1.put("/items/{item_id}", response_model=schemas.ItemBase)
+def update_user(item_id: int, item: schemas.ItemBase, db: Session = Depends(get_db)):
+    db_item = crud.get_item(db, item_id=item_id)
+    if db_item is None:
+        raise HTTPException(status_code=404, detail="Item not found")
+    
+    updated_item = crud.update_item(db, item_id=item_id, item_new=item)
+    return updated_item
+
+### app2
+app2 = FastAPI()
+
+
+# Main
+@app2.get("/")
+async def root():
+    return {"message": "Hello from FastAPI on port 8080"}
+
+# create nhiều users
+@app2.post("/users/", response_model=schemas.User)
+def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
+    db_user = crud.get_user_by_email(db, email=user.email)
+    if db_user:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    
+    return crud.create_user(db=db, user=user)
+
+# get all users
+@app2.get("/users/", response_model=list[schemas.User])
+def read_users(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    users = crud.get_users(db, skip=skip, limit=limit)
+    return users
+
+# get one user
+@app2.get("/users/{user_id}", response_model=schemas.User)
+def read_user(user_id: int, db: Session = Depends(get_db)):
+    db_user = crud.get_user(db, user_id=user_id)
+    if db_user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    return db_user
+
+# put one user
+@app2.put("/users/{user_id}", response_model=schemas.User)
+def update_user(user_id: int, user: schemas.User, db: Session = Depends(get_db)):
+    db_user = crud.get_user(db, user_id=user_id)
+    if db_user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    updated_user = crud.update_user(db, user_id=user_id, user_new=user)
+    return updated_user
+
+# change pass user
+@app2.put("/users/{user_id}/change_pass", response_model=schemas.ChangePassword)
+def change_pass(user_id: int, user: schemas.ChangePassword, db: Session = Depends(get_db)):
+    db_user = crud.get_user(db, user_id=user_id)
+    if db_user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    change_pass_user = crud.change_pass_user(db, user_id=user_id, use_new=user)
+    
+    return change_pass_user
+
+#create item for user
+@app2.post("/users/{user_id}/items/", response_model=schemas.Item)
+def create_item_for_user(
+    user_id: int, item: schemas.ItemCreate, db: Session = Depends(get_db)
+):
+    return crud.create_user_item(db=db, item=item, user_id=user_id)
+
+# get all items
+@app2.get("/items/", response_model=list[schemas.Item])
+def read_items(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    items = crud.get_items(db, skip=skip, limit=limit)
+    return items
+
+# get one item
+@app2.get("/items/{item_id}", response_model=schemas.Item)
+def read_item(item_id: int, db: Session = Depends(get_db)):
+    db_item = crud.get_item(db, item_id==item_id)
+    if db_item is None:
+        raise HTTPException(status_code=404, detail="Item not found")
+    return db_item
+
+# put one item
+@app2.put("/items/{item_id}", response_model=schemas.ItemBase)
+def update_user(item_id: int, item: schemas.ItemBase, db: Session = Depends(get_db)):
+    db_item = crud.get_item(db, item_id=item_id)
+    if db_item is None:
+        raise HTTPException(status_code=404, detail="Item not found")
+    
+    updated_item = crud.update_item(db, item_id=item_id, item_new=item)
+    return updated_item
+
+# if __name__ == "__main__":
+#     uvicorn.run(app1, host="127.0.0.1", port=8000)
+#     uvicorn.run(app2, host="127.0.0.1", port=8080)
+
+#### run uvicorn main:app1 --reload --port 8000////uvicorn main:app2 --reload --port 8080

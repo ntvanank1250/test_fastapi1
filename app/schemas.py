@@ -1,10 +1,9 @@
 from pydantic import BaseModel
-
+from typing import Optional
 # pydantic khai báo thuộc tính sử dụng (name: str):, còn SQLAlchemy  khai báo thuộc tính sử dụng =  (name = Column(String))
 class ItemBase(BaseModel):
     title: str
-    description: str | None = None
-
+    description: Optional[str] = None
 
 class ItemCreate(ItemBase):
     pass
@@ -25,6 +24,10 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     password: str
 
+class ChangePassword(UserCreate):
+    old_password: str
+    class Config:
+        extra = "allow"
 
 class User(UserBase):
     id: int
