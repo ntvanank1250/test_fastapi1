@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Items List</title>
+    <style>
+        .title-items {
+            text-decoration: none; /* Loại bỏ gạch chân */
+            color: #000; /* Màu chữ */
+            font-weight: bold; /* Đậm chữ */
+            text-transform: uppercase;/* Viet hoa */
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+        
+        th, td {
+            text-align: left;
+            padding: 8px;
+        }
+        
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+<body>
+    <h1>Items List</h1>
+    <button onclick="window.location.href = '/'">Back</button>
+    <table>
+        <tr>
+            <th>ID</th>
+            <th>Title</th>
+            <th>Description</th>
+        </tr>
+        {% for item in items %}
+        <tr>
+            <td>{{ item.id }}</td>
+            <td><a class="title-items" href="/items/{{ item.id }}">{{ item.title }}</a></td>
+            <td>{{ item.description }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+</body>
+</html>

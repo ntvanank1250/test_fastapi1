@@ -1,8 +1,14 @@
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Request
 from sqlalchemy.orm import Session
 import uvicorn
-
 from app import crud, models, schemas, database
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from starlette.responses import PlainTextResponse
+from starlette.exceptions import HTTPException
+
+templates = Jinja2Templates(directory="templates")
 
 SessionLocal = database.SessionLocal
 engine = database.engine
@@ -20,12 +26,21 @@ def get_db():
     finally:
         db.close()
 
-# Main
-@app1.get("/")
-async def root():
-    return {"message": "Hello from FastAPI on port 8000"}
+# homepage
+@app1.get("/", response_class=HTMLResponse)
+async def homepage(request: Request):
+    return templates.TemplateResponse("index.html", {"request": request})
+# end homepage
 
-# create nhiều users
+# page_all_users
+@app1.get("/users/", response_class=HTMLResponse, response_model=list[schemas.User])
+def read_users(request: Request, skip: int = 0, limit: int = 100, db: Session = Depends(get_db), ):
+    users = crud.get_users(db, skip=skip, limit=limit)
+    print (users)
+    return templates.TemplateResponse("users.html", {"users": users, "request": request})
+# end page_all_users
+
+# create  users
 @app1.post("/users/", response_model=schemas.User)
 def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     db_user = crud.get_user_by_email(db, email=user.email)
@@ -34,19 +49,16 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     
     return crud.create_user(db=db, user=user)
 
-# get all users
-@app1.get("/users/", response_model=list[schemas.User])
-def read_users(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    users = crud.get_users(db, skip=skip, limit=limit)
-    return users
+
+
 
 # get one user
-@app1.get("/users/{user_id}", response_model=schemas.User)
-def read_user(user_id: int, db: Session = Depends(get_db)):
+@app1.get("/users/{user_id}", response_class=HTMLResponse, response_model=schemas.User)
+def read_user(request: Request, user_id: int, db: Session = Depends(get_db)):
     db_user = crud.get_user(db, user_id=user_id)
     if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")
-    return db_user
+    return templates.TemplateResponse("user.html", {"user": db_user, "request": request})
 
 # put one user
 @app1.put("/users/{user_id}", response_model=schemas.User)
@@ -76,18 +88,19 @@ def create_item_for_user(
     return crud.create_user_item(db=db, item=item, user_id=user_id)
 
 # get all items
-@app1.get("/items/", response_model=list[schemas.Item])
-def read_items(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+@app1.get("/items/", response_class=HTMLResponse, response_model=list[schemas.Item])
+def read_items(request: Request, skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     items = crud.get_items(db, skip=skip, limit=limit)
-    return items
+    return templates.TemplateResponse("items.html", {"items": items, "request": request})
 
 # get one item
-@app1.get("/items/{item_id}", response_model=schemas.Item)
-def read_item(item_id: int, db: Session = Depends(get_db)):
-    db_item = crud.get_item(db, item_id==item_id)
+@app1.get("/items/{item_id}",response_class=HTMLResponse, response_model=schemas.Item)
+def get_item(request: Request, item_id: int, db: Session = Depends(get_db)):
+    db_item = crud.get_item(db, item_id=item_id)
+    print (db_item.id)
     if db_item is None:
         raise HTTPException(status_code=404, detail="Item not found")
-    return db_item
+    return templates.TemplateResponse("item.html", {"item": db_item, "request": request})
 
 # put one item
 @app1.put("/items/{item_id}", response_model=schemas.ItemBase)
@@ -187,3 +200,15 @@ def update_user(item_id: int, item: schemas.ItemBase, db: Session = Depends(get_
 #     uvicorn.run(app2, host="127.0.0.1", port=8080)
 
 #### run uvicorn main:app1 --reload --port 8000////uvicorn main:app2 --reload --port 8080
+
+# page 404
+@app1.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request: Request, exc: StarletteHTTPException):
+    return templates.TemplateResponse("404.html", {"request": request}, status_code=exc.status_code)
+
+
+@app1.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    return templates.TemplateResponse("404.html", {"request": request}, status_code=exc.status_code)
+# end page 404
+

@@ -14,8 +14,7 @@ services:
     ports:
       - 8080
   
-  nginx-headers-more:
-    image: anroe/nginx-headers-more
+
   nginx:
     image: nginx:latest
     volumes:
